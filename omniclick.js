@@ -1,4 +1,4 @@
-$(function ($) {
+;(function ($) {
 
 	var Omniclick = function (config) {
 		if (!(this instanceof Omniclick)) {

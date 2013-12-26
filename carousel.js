@@ -1,4 +1,4 @@
-$(function ($) {
+;(function ($) {
 
 	Nutrisystem_JS.initializedCarousels = {};
 
@@ -17,8 +17,19 @@ $(function ($) {
 			return new Carousel(config);
 		}
 
+        this.actions = {
+            fade: this.fadeToPane,
+            slide: this.slideToPane,
+            default: this.fadeToPane
+        }
 
-		this.defaults = (function (that) {
+        this.wrapperMods = {
+            fade: this.fadeWrapper,
+            slide: this.slideWrapper,
+            default: this.slideWrapper
+        }
+
+		this.settings = (function (that) {
 
 			var $carousel = that.config && that.config.carousel ? $(that.config.carousel) : $('.ns-carousel');
 
@@ -42,41 +53,62 @@ $(function ($) {
 			this.addPaneWrapper();
 			this.bindEvents();
 		},
-		addPaneWrapper: function () {
+        slideWrapper: function (wrapper) {
+            var that = this;
+            wrapper.css({
+                left:- that.settings.$panes[0].offsetWidth,
+                width: function () {
+                    return that.settings.$panes.length * that.settings.$panes[0].offsetWidth + 'px';
+                },
+                height: function () {
+                    return that.settings.$panes[0].offsetHeight + 'px';
+                }
+            });
+            this.settings.$panes.last().prependTo($html);
+        },
+        fadeWrapper: function (wrapper) {
+            var that = this;
+            wrapper.css({
+                height: function () {
+                    return that.settings.$panes[0].offsetHeight + 'px';
+                }
+            });
+
+            that.settings.$panes.css({
+                position: 'absolute',
+                left: 0,
+                top:0,
+                opacity: 0
+            })
+            .first()
+            .css({
+                opacity:1
+            });
+        },
+        addPaneWrapper: function () {
 			var that = this,
 				$html = $('<div class="ns-pane-wrapper"></div>');
 
-			this.defaults.$panes.appendTo($html);
-			$html
-			.prependTo(this.defaults.$carousel)
-			.css({
-				width: function () {
-					return that.defaults.$panes.length * that.defaults.$panes[0].offsetWidth + 'px';
-				},
-				height: function () {
-					return that.defaults.$panes[0].offsetHeight + 'px';
-				}
-			});
+			this.settings.$panes.appendTo($html);
+			$html.prependTo(this.settings.$carousel);
 
-			this.defaults.$panes.last().prependTo($html);
-			$html.css({left:- that.defaults.$panes[0].offsetWidth});
+            this.wrapperMods[this.settings['action']].call(this, $html);
 
-			this.defaults['$panes-wrapper'] = $html;
+			this.settings['$panes-wrapper'] = $html;
 
-			
 		},
 		bindEvents: function () {
 			var that = this;
 
 			this.setInterval();
 
-			this.defaults.$carousel.on('click', '.controls a', $.proxy(this.controlClicked, this));
-			this.defaults.$carousel.on('mouseover, mouseenter', $.proxy(this.mouseEnter, this));
-			this.defaults.$carousel.on('mouseout, mouseleave', $.proxy(this.mouseOut, this));
+			this.settings.$carousel.on('click', '.controls a', $.proxy(this.controlClicked, this));
+			this.settings.$carousel.on('mouseover, mouseenter', $.proxy(this.mouseEnter, this));
+			this.settings.$carousel.on('mouseout, mouseleave', $.proxy(this.mouseOut, this));
 			
 			// pausing the carousel if any link within a pane is clicked
-			this.defaults.$panes.on('click', 'a', function () {
-				that.defaults.pause = true;
+			this.settings.$panes.on('click', 'a', function () {
+				that.settings.pause = true;
 				$.proxy(that.clearInterval, that);
 			});
 		},
@@ -88,15 +120,19 @@ $(function ($) {
 				$next = $ct.siblings('.active').next(),
 				// if the target is the pane at index 0 we need to let the goToPane method know to move
 				// the last pane to the front.
-				dir = $('div.pane[data-carousel-pane=' + $ct.attr('rel') + ']', this.defaults['$panes-wrapper']).index() === 0 ?
+				dir = $('div.pane[data-carousel-pane=' + $ct.attr('rel') + ']', this.settings['$panes-wrapper']).index() === 0 ?
 					'prev' : 'next';
 			
 			if (!$ct.hasClass('arrow')) {
-				this.defaults['$controls'].removeClass('active');
-				this.defaults['$panes'].removeClass('active');
+				this.settings['$controls'].removeClass('active');
+				this.settings['$panes'].removeClass('active');
 				$ct.addClass('active');
-				$('div.pane[data-carousel-pane=' + $ct.attr('rel') + ']', this.defaults['$panes-wrapper']).addClass('active');
-				this.goToPane($ct.attr('rel'), dir);
+				$('div.pane[data-carousel-pane=' + $ct.attr('rel') + ']', this.settings['$panes-wrapper']).addClass('active');
+                if (this.actions[this.settings['action']] !== undefined) {
+				    this.actions[this.settings['action']].call(this, $ct.attr('rel'), dir);
+                } else {
+                    this.actions['default'].call(this, $ct.attr('rel'), dir);
+                }
 			} else {
 				if ($ct.hasClass('prev')) {
 					if (!$prev.hasClass('arrow')) {
@@ -115,12 +151,30 @@ $(function ($) {
 			// we're still supported older IE; it doesn't recognize preventDefault()
 			return false;
 		},
-		goToPane: function (rel, dir) {
+        fadeToPane: function (rel, dir) {
+            var that = this,
+                activePane = $('div.pane[data-carousel-pane=' + rel + ']', this.settings['$panes-wrapper']);
+
+            activePane.stop().animate({
+                opacity: 1
+                },
+                that.settings['speed']
+            )
+            .siblings(':visible')
+            .stop()
+            .animate({
+                    opacity: 0
+                },
+                that.settings['speed']
+            )
+        },
+        slideToPane: function (rel, dir) {
 			var that = this;
-			this.defaults['$panes-wrapper'].stop().animate({
-				left: - $('div.pane[data-carousel-pane=' + rel + ']', this.defaults['$panes-wrapper']).position().left
+
+			this.settings['$panes-wrapper'].stop().animate({
+				left: - $('div.pane[data-carousel-pane=' + rel + ']', this.settings['$panes-wrapper']).position().left
 				},
-				that.defaults['speed'],
+				that.settings['speed'],
 				function() {
 					if (dir === 'next') {
 						var prevPanes = $('div.pane[data-carousel-pane=' + rel + ']', this).prevAll().sort(function (a,b) {
@@ -129,18 +183,18 @@ $(function ($) {
 						prevPanes = prevPanes.not(":last");
 						prevPanes.appendTo(this);
 					} else {
-						$('div.pane', that.defaults['$panes-wrapper']).last().prependTo(this);
+						$('div.pane', that.settings['$panes-wrapper']).last().prependTo(this);
 					}
 					$(this).css({left:-1080});
 				}
 			);
 		},
 		autoCarousel: function () {
-			$('.active', this.defaults.$controls.parent()).next().click();
+			$('.active', this.settings.$controls.parent()).next().click();
 		},
 		setInterval: function () {
 			var that = this;
-			that.carouselInterval = setInterval($.proxy(that.autoCarousel, that), that.defaults.rotateSpeed);
+			that.carouselInterval = setInterval($.proxy(that.autoCarousel, that), that.settings.rotateSpeed);
 		},
 		clearInterval: function () {
 			if (this.carouselInterval) {
@@ -152,11 +206,11 @@ $(function ($) {
 			this.setInterval();
 		},
 		mouseEnter: function () {
-			this.defaults.pause = false;
+			this.settings.pause = false;
 			this.clearInterval();
 		},
 		mouseOut: function () {
-			if (this.defaults.pause === false) {
+			if (this.settings.pause === false) {
 				this.restartInterval();
 			}
 		}

@@ -1,4 +1,4 @@
-$(function ($) {
+;(function ($) {
 
 	var Popup = function (config) {
 		if (!(this instanceof Popup)) {

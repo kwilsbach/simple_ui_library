@@ -1,4 +1,4 @@
-$(function ($) {
+;(function ($) {
 
 	var Stalker = function (config) {
 		if (!(this instanceof Stalker)) {
