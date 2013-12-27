@@ -2,6 +2,22 @@
 
 	Nutrisystem_JS.initializedCarousels = {};
 
+    var ie = (function(){
+
+        var undef,
+            v = 3,
+            div = document.createElement('div'),
+            all = div.getElementsByTagName('i');
+
+        while (
+            div.innerHTML = '<!--[if gt IE ' + (++v) + ']><i></i><![endif]-->',
+                all[0]
+            );
+
+        return v > 4 ? v : undef;
+
+    }());
+
 	var Carousel = function (config) {
 
 		var that = this;
@@ -20,18 +36,19 @@
         this.actions = {
             fade: this.fadeToPane,
             slide: this.slideToPane,
-            default: this.fadeToPane
+            'default': this.fadeToPane
         }
 
         this.wrapperMods = {
             fade: this.fadeWrapper,
             slide: this.slideWrapper,
-            default: this.slideWrapper
+            'default': this.slideWrapper
         }
 
 		this.settings = (function (that) {
 
-			var $carousel = that.config && that.config.carousel ? $(that.config.carousel) : $('.ns-carousel');
+			var $carousel = that.config && that.config.carousel ? $(that.config.carousel) : $('.ns-carousel'),
+                action = ie < 9 ? 'slide' : 'fade';
 
 			return {
 				$carousel: $carousel,
@@ -40,7 +57,7 @@
 				speed: 1000,
 				rotateSpeed: 7000,
 				pause: false,
-                action: 'fade'
+                action: action
 			};
 		}(this));
 
@@ -64,7 +81,7 @@
                     return that.settings.$panes[0].offsetHeight + 'px';
                 }
             });
-            this.settings.$panes.last().prependTo($html);
+            this.settings.$panes.last().prependTo(wrapper);
         },
         fadeWrapper: function (wrapper) {
             var that = this;
